@@ -35,8 +35,7 @@ class AppointmentController extends Controller
             }
         }
        
-              
-        return response()->json(['status'=>1]);
+        return back()->withStatus(__('Appointment successfully created.'));
     }
 
     /**
