@@ -22,7 +22,7 @@ Route::get('/', function () {
 Auth::routes();
 
 Route::get('/home', 'App\Http\Controllers\HomeController@index')->name('home');
-Route::get('getAvailableHours', 'App\Http\Controllers\AppointmentController@getAvailableHours');
+Route::post('getAvailableHours', 'App\Http\Controllers\AppointmentController@getAvailableHours');
 Route::post('appointments/add', 'App\Http\Controllers\AppointmentController@create')->name('createAppointment');
 
 Route::group(['middleware' => 'auth'], function () {

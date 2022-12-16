@@ -18,8 +18,8 @@ return new class extends Migration
             $table->string('first_name');
             $table->string('last_name');
             $table->string('email');
-            $table->timestamp('date');
-            $table->text('message');
+            $table->string('date');
+            $table->text('message')->nullable();
             $table->string('hour_interval');
             $table->unsignedBigInteger('user_id')->nullable();
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');

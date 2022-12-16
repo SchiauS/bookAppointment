@@ -21,10 +21,10 @@ class AppointmentController extends Controller
             'last_name' => 'required|max:60',
             'email' => 'required|email|max:255',
             'date' => 'required|min:5',
+            'hour_interval'=>'required'
         ]);
-
         if ($validator->fails())
-            return response()->json(['status'=>0]);
+            return back()->withErrors($validator->errors()->toArray());
         else
         {
             try {
@@ -53,23 +53,39 @@ class AppointmentController extends Controller
         $stopDay = 21;
         $pauseTime = 2.5;
         $pauseStart = 13;
-        $dayIntervals = [];
-
-        dd($day);
-        while($startDay <= $stopDay - $appointmentTime){
+        $dayIntervals = new \stdClass();
+        $appointments = Appointment::where('date', $day)->get();
+        $i = 0;
+        while($startDay <= ($stopDay - $appointmentTime)){
             $interval = '';
-            if($startDay > $pauseStart && $startDay < ($pauseStart - $pauseTime))
-                break;
-            $interval .= ''.floor($startDay);
-            if(fmod($startDay, 1) !== 0.00)    
-                $interval .= ':30';
-            else
-                $interval .= ':00';
-            $startDay += 0.5;    
-            array_push($dayIntervals, $interval); 
-        }
+            $hour = new \stdClass();
 
-        // Appointment::where('day', '')->all();        
-        return $dayIntervals;
+            if($startDay > $pauseStart && $startDay < ($pauseStart - $pauseTime))
+                exit;
+            $interval .= $this->convertNumberToHours($startDay).' - '.$this->convertNumberToHours($startDay+1);
+            $hour->interval = $interval;
+            $lastIntervalAvailable = false;
+            if(isset($dayIntervals->{$i-1})){
+                $lastInterval = $this->convertNumberToHours($startDay-0.5).' - '.$this->convertNumberToHours($startDay+0.5);
+                if($dayIntervals->{$i-1}->available == 0 && !$appointments->where('hour_interval', $lastInterval)->isEmpty())
+                    $lastIntervalAvailable = true;
+            }
+                
+            if(!$appointments->where('hour_interval', $interval)->isEmpty() || $lastIntervalAvailable)
+                $hour->available = 0;
+            else    
+                $hour->available = 1;
+            $dayIntervals->{$i} = $hour;
+            $startDay+=0.5;
+            $i++;
+        }    
+        return response()->json($dayIntervals);
+    }
+
+
+    private function convertNumberToHours($decimal){
+        $hours = floor($decimal);
+        $minutes = round((((($decimal - $hours) / 100.0) * 60.0) * 100), 0);
+        return str_pad($hours, 2, "0", STR_PAD_LEFT) . ":" . str_pad($minutes, 2, "0", STR_PAD_LEFT);
     }
 }

@@ -13,7 +13,7 @@
                                 Book your appointment NOW and we will assign a best consilier for you!
                         </small>
                     </div>
-                    <form role="form" method="POST" action="{{ route('createAppointment') }}">
+                    <form role="form" method="POST" action="{{ route('createAppointment') }}" novalidate>
                         @csrf
                         <div class="row">
                         <div class="col-md-6 form-group{{ $errors->has('first_name') ? ' has-danger' : '' }}">
@@ -51,15 +51,25 @@
                             @endif
                         </div>
                         <div class="form-group date">
+                            @if ($errors->has('date'))
+                                <span class="invalid-feedback" style="display: block;" role="alert">
+                                    <strong>{{ $errors->first('date') }}</strong>
+                                </span>
+                            @endif  
                             <div class="input-group input-group-alternative">
                                 <div class="input-group-prepend">
                                     <span class="input-group-text"><i class="ni ni-calendar-grid-58"></i></span>
                                 </div>
-                                <input id="dayPicker" name="day" type="text" class="form-control" value="{{now()->format("d/m/Y")}}">
+                                <input id="dayPicker" name="date" type="text" class="form-control" required>
                             </div>
                         </div>
-                        <input hidden name="hour_interval">
-                        <div class="form-group">                   
+                        <input id="hourInterval" hidden name="hour_interval" placeholder="{{ __('Please select hour interv') }}"  required>
+                        <div class="form-group">
+                            @if ($errors->has('hour_interval'))
+                                <span class="invalid-feedback" style="display: block;" role="alert">
+                                    <strong>{{ $errors->first('hour_interval') }}</strong>
+                                </span>
+                            @endif                   
                             <table class="table table-bordered">
                                 <tbody id="hoursTable"></tbody>
                               </table>
@@ -86,21 +96,23 @@
 @push('js')
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
     <script type="text/javascript">
+    $(function() {
         $.ajaxSetup({
             headers: {
             'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             }
         });
+    });
     </script>
     <script>
         var date = moment();
-        const currentDate = date.format('d/m/Y');
+        const currentDate = date.format('DD/MM/YYYY');
         function getData(ajaxurl, values) { 
-            console.log(values);
             return $.ajax({
                         url: ajaxurl,
                         type: 'POST',
-                        data: values
+                        data: values,
+                        dataType:'json',
             });
         };
 
@@ -113,24 +125,50 @@
             }
         }
         function appendHours(day = currentDate){
+            $('#hoursTable').html('');
             const hours = getHours(day);
             hours.then((a) => {
                 $.each(a, function(index, value){
-                    if(index % 5 == 0 && index != 0)
+                    const {available, interval} = value;
+                    if(index % 3 == 0 && index != 0)
                         $('#hoursTable').append('/<tr>');
-                    if(index % 5 == 0)
-                        $('#hoursTable').append('<tr>');        
-                    $('#hoursTable').append("<td><button type='button' class='btn btn-sm btn btn-outline-primary hourBtn'>"+value+"</button></td>");    
+                    if(index % 3 == 0)
+                        $('#hoursTable').append('<tr>');  
+                    if(available == 1)              
+                        $('#hoursTable').append("<td><button type='button' onclick='setInterval(this)' data-available='"+available+"' class='btn btn-sm btn btn-outline-primary hourBtn'>"+interval+"</button></td>");    
+                    else if(available == 0)
+                        $('#hoursTable').append("<td><button type='button' disabled data-available='"+available+"' class='btn btn-sm btn btn-outline-primary'>"+interval+"</button></td>");    
                 });
             });
-            
-                
+        }
+
+        function setInterval(element) {
+            if($(element).attr('data-available') == 1){
+                    $(".hourBtn[data-available=0]").removeClass('btn-primary');
+                    $(".hourBtn[data-available=0]").addClass('btn-outline-primary');
+                    $(".hourBtn[data-available=0]").attr('data-available', 1);
+                    $(element).removeClass('btn-outline-primary');
+                    $(element).addClass('btn-primary');
+                    $(element).attr('data-available', 0);
+                    $("#hourInterval").val($(element).html());
+                }else{
+                    $(".hourBtn[data-available=1]").removeClass('btn-primary');
+                    $(".hourBtn[data-available=1]").addClass('btn-outline-primary');
+                    $(".hourBtn[data-available=1]").attr('data-available', 0);
+                    $(element).removeClass('btn-primary');
+                    $(element).addClass('btn-outline-primary');
+                    $(element).attr('data-available', 1);
+                    $("#hourInterval").val('');
+                }
         }
         $(function() {
-            $("#dayPicker").datepicker().on('changeDate', function(e) {
-                console.log(this.value);
+            $("#dayPicker").attr('value', currentDate);
+            $("#dayPicker").datepicker({
+                setDate:currentDate,
+                format: 'dd/mm/yyyy'
+            }).on('changeDate', function(e) {
                 this.value && appendHours(this.value);
-            });    
+            });
             appendHours();    
         });
     </script>
